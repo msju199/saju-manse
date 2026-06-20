@@ -4,8 +4,238 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>사주 만세력</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Noto Serif KR', serif, sans-serif;
+      max-width: 640px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background: #fafaf8;
+      color: #222;
+    }
+    h1 { text-align: center; font-size: 1.8rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; margin-bottom: 0.8rem; border-bottom: 2px solid #ddd; padding-bottom: 0.4rem; }
+
+    #saju-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      align-items: flex-end;
+      background: #fff;
+      padding: 1.2rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+    .field { display: flex; flex-direction: column; gap: 0.25rem; }
+    .field label { font-size: 0.82rem; color: #555; font-weight: 600; }
+    .field input {
+      width: 68px;
+      padding: 0.4rem 0.4rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .field.year-field input { width: 88px; }
+    button[type="submit"] {
+      padding: 0.45rem 1.4rem;
+      background: #1a4b8c;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      height: 36px;
+      align-self: flex-end;
+    }
+    button[type="submit"]:hover { background: #1357a6; }
+
+    #pillars-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+    #pillars-table th {
+      background: #1a4b8c;
+      color: #fff;
+      padding: 0.6rem 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    #pillars-table td {
+      padding: 0.7rem 0.4rem;
+      font-size: 2.2rem;
+      border-bottom: 1px solid #eee;
+    }
+    #pillars-table tbody tr:last-child td { border-bottom: none; }
+    .tgan { color: #c0392b; }
+    .jiji { color: #1a4b8c; }
+
+    #ohang-chart {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      padding: 1rem 1.5rem 1.2rem;
+    }
+
+    #result { margin-top: 1.5rem; }
+    #error-msg { color: #c0392b; margin-top: 0.5rem; font-size: 0.9rem; }
+  </style>
+  <script type="importmap">
+  { "imports": { "@fullstackfamily/manseryeok": "https://esm.sh/@fullstackfamily/manseryeok@1.0.8" } }
+  </script>
 </head>
 <body>
   <h1>사주 만세력 계산기</h1>
+
+  <form id="saju-form">
+    <div class="field year-field">
+      <label for="inp-year">년</label>
+      <input id="inp-year" type="number" value="1990" min="1900" max="2100">
+    </div>
+    <div class="field">
+      <label for="inp-month">월</label>
+      <input id="inp-month" type="number" value="5" min="1" max="12">
+    </div>
+    <div class="field">
+      <label for="inp-day">일</label>
+      <input id="inp-day" type="number" value="15" min="1" max="31">
+    </div>
+    <div class="field">
+      <label for="inp-hour">시</label>
+      <input id="inp-hour" type="number" value="14" min="0" max="23">
+    </div>
+    <div class="field">
+      <label for="inp-minute">분</label>
+      <input id="inp-minute" type="number" value="30" min="0" max="59">
+    </div>
+    <button type="submit">계산</button>
+  </form>
+  <div id="error-msg" hidden></div>
+
+  <div id="result" hidden>
+    <h2>사주팔자</h2>
+    <table id="pillars-table">
+      <thead>
+        <tr>
+          <th>년주</th>
+          <th>월주</th>
+          <th>일주</th>
+          <th>시주</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tgan" id="year-tgan"></span></td>
+          <td><span class="tgan" id="month-tgan"></span></td>
+          <td><span class="tgan" id="day-tgan"></span></td>
+          <td><span class="tgan" id="hour-tgan"></span></td>
+        </tr>
+        <tr>
+          <td><span class="jiji" id="year-jiji"></span></td>
+          <td><span class="jiji" id="month-jiji"></span></td>
+          <td><span class="jiji" id="day-jiji"></span></td>
+          <td><span class="jiji" id="hour-jiji"></span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>오행 분포</h2>
+    <div id="ohang-chart"></div>
+  </div>
+
+  <script type="module">
+    import { getSajuPillars } from './src/saju.js';
+
+    const OHANG = {
+      '甲': '목', '乙': '목',
+      '丙': '화', '丁': '화',
+      '戊': '토', '己': '토',
+      '庚': '금', '辛': '금',
+      '壬': '수', '癸': '수',
+      '寅': '목', '卯': '목',
+      '巳': '화', '午': '화',
+      '辰': '토', '戌': '토', '丑': '토', '未': '토',
+      '申': '금', '酉': '금',
+      '亥': '수', '子': '수',
+    };
+
+    const COLORS = { '목': '#4caf50', '화': '#f44336', '토': '#e09b2d', '금': '#9e9e9e', '수': '#2196f3' };
+    const ORDER  = ['목', '화', '토', '금', '수'];
+
+    function countOhang(chars) {
+      const c = { '목': 0, '화': 0, '토': 0, '금': 0, '수': 0 };
+      for (const ch of chars) { const e = OHANG[ch]; if (e) c[e]++; }
+      return c;
+    }
+
+    function buildSvgChart(counts) {
+      const TOTAL   = 8;
+      const BAR_H   = 30;
+      const GAP     = 14;
+      const LBL_W   = 28;
+      const MAX_W   = 270;
+      const SVG_W   = LBL_W + MAX_W + 32;
+      const SVG_H   = ORDER.length * (BAR_H + GAP) - GAP + 16;
+
+      const rows = ORDER.map((elem, i) => {
+        const y     = i * (BAR_H + GAP) + 8;
+        const count = counts[elem];
+        const barW  = count === 0 ? 0 : Math.round((count / TOTAL) * MAX_W);
+        const color = COLORS[elem];
+        return `
+          <text x="${LBL_W - 5}" y="${y + BAR_H / 2 + 5}" text-anchor="end" font-size="15" font-family="sans-serif" fill="#333">${elem}</text>
+          <rect x="${LBL_W}" y="${y}" width="${MAX_W}" height="${BAR_H}" rx="4" fill="#efefef"/>
+          <rect x="${LBL_W}" y="${y}" width="${barW}" height="${BAR_H}" rx="4" fill="${color}"/>
+          <text x="${LBL_W + barW + 7}" y="${y + BAR_H / 2 + 5}" font-size="14" font-family="sans-serif" fill="#444">${count}</text>
+        `;
+      }).join('');
+
+      return `<svg width="${SVG_W}" height="${SVG_H}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto">${rows}</svg>`;
+    }
+
+    document.getElementById('saju-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('error-msg');
+      errEl.hidden = true;
+
+      const year   = +document.getElementById('inp-year').value;
+      const month  = +document.getElementById('inp-month').value;
+      const day    = +document.getElementById('inp-day').value;
+      const hour   = +document.getElementById('inp-hour').value;
+      const minute = +document.getElementById('inp-minute').value;
+
+      let result;
+      try {
+        result = getSajuPillars(year, month, day, hour, minute);
+      } catch (err) {
+        errEl.textContent = '계산 오류: ' + err.message;
+        errEl.hidden = false;
+        return;
+      }
+
+      const pillars = {
+        year:  result.yearPillarHanja,
+        month: result.monthPillarHanja,
+        day:   result.dayPillarHanja,
+        hour:  result.hourPillarHanja,
+      };
+
+      ['year', 'month', 'day', 'hour'].forEach(p => {
+        document.getElementById(`${p}-tgan`).textContent = pillars[p][0];
+        document.getElementById(`${p}-jiji`).textContent = pillars[p][1];
+      });
+
+      const allChars = Object.values(pillars).flatMap(h => [h[0], h[1]]);
+      const counts   = countOhang(allChars);
+      document.getElementById('ohang-chart').innerHTML = buildSvgChart(counts);
+      document.getElementById('result').hidden = false;
+    });
+  </script>
 </body>
 </html>
