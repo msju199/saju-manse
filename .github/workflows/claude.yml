@@ -1,0 +1,22 @@
+name: Claude
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+jobs:
+  claude:
+    # actor 가드 — repo owner(msju199)가 연 이슈/댓글만 트리거 (public repo prompt injection 차단)
+    if: |
+      github.actor == 'msju199' &&
+      (contains(github.event.issue.body, '@claude') || contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
