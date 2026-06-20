@@ -17,6 +17,10 @@ jobs:
       issues: write
       id-token: write
     steps:
+      # tag mode(이슈→코드→PR)는 checkout 필수 — repo 클론(.git)이 있어야 브랜치 생성 가능
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
